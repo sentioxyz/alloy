@@ -5,7 +5,7 @@ use alloy_primitives::{Bytes, B256, U256};
 use alloy_rpc_types_eth::{state::StateOverride, BlockOverrides};
 use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
 use std::{collections::BTreeMap, time::Duration};
-
+use crate::geth::sentio::SentioTrace;
 // re-exports
 pub use self::{
     call::{CallConfig, CallFrame, CallLogFrame},
@@ -22,6 +22,7 @@ pub mod four_byte;
 pub mod mux;
 pub mod noop;
 pub mod pre_state;
+pub mod sentio;
 
 /// Error when the inner tracer from [GethTrace] is mismatching to the target tracer.
 #[derive(Debug, thiserror::Error)]
@@ -126,6 +127,8 @@ pub enum GethTrace {
     NoopTracer(NoopFrame),
     /// The response for mux tracer
     MuxTracer(MuxFrame),
+    // The response for sentio tracer
+    SentioTracer(SentioTrace),
     /// Any other trace response, such as custom javascript response objects
     JS(serde_json::Value),
 }
@@ -230,6 +233,12 @@ impl From<MuxFrame> for GethTrace {
     }
 }
 
+impl From<SentioTrace> for GethTrace {
+    fn from(value: SentioTrace) -> Self {
+        Self::SentioTracer(value)
+    }
+}
+
 /// Available built-in tracers
 ///
 /// See <https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers>
@@ -262,6 +271,8 @@ pub enum GethDebugBuiltInTracerType {
     /// The mux tracer is a tracer that can run multiple tracers at once.
     #[serde(rename = "muxTracer")]
     MuxTracer,
+    #[serde(rename = "sentioTracer")]
+    SentioTracer,
 }
 
 /// Available tracers
@@ -326,6 +337,13 @@ impl GethDebugTracerConfig {
 
     /// Returns the [MuxConfig] if it is a mux config.
     pub fn into_mux_config(self) -> Result<MuxConfig, serde_json::Error> {
+        if self.0.is_null() {
+            return Ok(Default::default());
+        }
+        self.from_value()
+    }
+
+    pub fn into_sentio_config(self) -> Result<sentio::SentioTracerConfig, serde_json::Error> {
         if self.0.is_null() {
             return Ok(Default::default());
         }
