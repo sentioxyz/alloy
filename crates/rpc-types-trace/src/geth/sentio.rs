@@ -1,25 +1,40 @@
+use serde_with::DefaultOnNull;
 use std::collections::HashMap;
 use alloy_primitives::{Address, BlockHash, BlockNumber, Bytes, TxHash, TxIndex, TxNonce, B256, B64, U256};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
+#[serde_as]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct SentioTracerConfig {
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub functions: HashMap<Address, Vec<FunctionInfo>>,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub calls: HashMap<Address, Vec<usize>>,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub debug: bool,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub with_internal_calls: bool,
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct FunctionInfo {
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub name: String,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub signature_hash: Bytes,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub pc: usize,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub input_size: usize,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub input_memory: bool,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub output_size: usize,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub output_memory: bool,
 }
 
