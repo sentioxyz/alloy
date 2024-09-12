@@ -1,6 +1,6 @@
 use serde_with::DefaultOnNull;
 use std::collections::HashMap;
-use alloy_primitives::{Address, BlockHash, BlockNumber, Bytes, TxHash, TxIndex, TxNonce, B256, B64, U256};
+use alloy_primitives::{Address, BlockHash, Bytes, TxHash, TxIndex, TxNonce, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -91,7 +91,7 @@ pub struct SentioTrace {
     pub data: Option<Bytes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub topics: Option<Vec<B256>>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traces: Vec<Box<SentioTrace>>,
 
     // only in root trace
@@ -109,7 +109,7 @@ pub struct SentioReceipt {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tx_hash: Option<TxHash>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub block_number: Option<BlockNumber>,
+    pub block_number: Option<U64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_hash: Option<BlockHash>,
     #[serde(skip_serializing_if = "Option::is_none")]
