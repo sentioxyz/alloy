@@ -81,6 +81,8 @@ pub struct SentioTrace {
     pub output_stack: Option<Vec<U256>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_memory: Option<Bytes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_pc: Option<usize>,
 
     // used by log
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -91,6 +93,7 @@ pub struct SentioTrace {
     pub data: Option<Bytes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub topics: Option<Vec<B256>>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traces: Vec<Box<SentioTrace>>,
 
