@@ -45,7 +45,7 @@ pub struct CallFrame {
     pub typ: String,
 
     // must not have this field, to distinguish with sentio trace
-    #[serde(rename = "startIndex", deserialize_with = "deny_field")]
+    #[serde(rename = "startIndex", skip_serializing, deserialize_with = "deny_field")]
     pub start_index: (),
 }
 
