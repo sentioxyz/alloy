@@ -9,6 +9,7 @@ use alloy_rpc_types_eth::{state::StateOverride, BlockOverrides};
 use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::BTreeMap, time::Duration};
 use crate::geth::sentio::SentioTrace;
+use crate::geth::sentio_prestate::SentioPrestateResult;
 // re-exports
 pub use self::{
     call::{CallConfig, CallFrame, CallLogFrame, FlatCallConfig},
@@ -26,6 +27,7 @@ pub mod mux;
 pub mod noop;
 pub mod pre_state;
 pub mod sentio;
+pub mod sentio_prestate;
 
 /// Error when the inner tracer from [GethTrace] is mismatching to the target tracer.
 #[derive(Debug, thiserror::Error)]
@@ -132,8 +134,10 @@ pub enum GethTrace {
     NoopTracer(NoopFrame),
     /// The response for mux tracer
     MuxTracer(MuxFrame),
-    // The response for sentio tracer
+    /// The response for sentio tracer
     SentioTracer(SentioTrace),
+    /// The response for sentio prestate tracer
+    SentioPrestateTracer(SentioPrestateResult),
     /// Any other trace response, such as custom javascript response objects
     JS(serde_json::Value),
 }
@@ -258,6 +262,12 @@ impl From<SentioTrace> for GethTrace {
     }
 }
 
+impl From<SentioPrestateResult> for GethTrace {
+    fn from(value: SentioPrestateResult) -> Self {
+        Self::SentioPrestateTracer(value)
+    }
+}
+
 /// Available built-in tracers
 ///
 /// See <https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers>
@@ -300,6 +310,8 @@ pub enum GethDebugBuiltInTracerType {
     MuxTracer,
     #[serde(rename = "sentioTracer")]
     SentioTracer,
+    #[serde(rename = "sentioPrestateTracer")]
+    SentioPrestateTracer,
 }
 
 /// Available tracers
@@ -379,6 +391,13 @@ impl GethDebugTracerConfig {
     }
 
     pub fn into_sentio_config(self) -> Result<sentio::SentioTracerConfig, serde_json::Error> {
+        if self.0.is_null() {
+            return Ok(Default::default());
+        }
+        self.from_value()
+    }
+
+    pub fn into_sentio_prestate_config(self) -> Result<sentio_prestate::SentioPrestateTracerConfig, serde_json::Error> {
         if self.0.is_null() {
             return Ok(Default::default());
         }
