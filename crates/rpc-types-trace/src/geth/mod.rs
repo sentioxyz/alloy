@@ -10,6 +10,7 @@ use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Deserializer, 
 use std::{collections::BTreeMap, time::Duration};
 use crate::geth::sentio::SentioTrace;
 use crate::geth::sentio_prestate::SentioPrestateResult;
+use crate::geth::sentio_reth_raw::SentioRethRawTrace;
 // re-exports
 pub use self::{
     call::{CallConfig, CallFrame, CallLogFrame, FlatCallConfig},
@@ -28,6 +29,7 @@ pub mod noop;
 pub mod pre_state;
 pub mod sentio;
 pub mod sentio_prestate;
+pub mod sentio_reth_raw;
 
 /// Error when the inner tracer from [GethTrace] is mismatching to the target tracer.
 #[derive(Debug, thiserror::Error)]
@@ -138,6 +140,8 @@ pub enum GethTrace {
     SentioTracer(SentioTrace),
     /// The response for sentio prestate tracer
     SentioPrestateTracer(SentioPrestateResult),
+    /// Reth raw trace, for debugging
+    SentioRethRawTracer(SentioRethRawTrace),
     /// Any other trace response, such as custom javascript response objects
     JS(serde_json::Value),
 }
@@ -268,6 +272,12 @@ impl From<SentioPrestateResult> for GethTrace {
     }
 }
 
+impl From<SentioRethRawTrace> for GethTrace {
+    fn from(value: SentioRethRawTrace) -> Self {
+        Self::SentioRethRawTracer(value)
+    }
+}
+
 /// Available built-in tracers
 ///
 /// See <https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers>
@@ -308,6 +318,8 @@ pub enum GethDebugBuiltInTracerType {
     SentioTracer,
     #[serde(rename = "sentioPrestateTracer")]
     SentioPrestateTracer,
+    #[serde(rename = "sentioRethRawTracer")]
+    SentioRethRawTracer
 }
 
 /// Available tracers
