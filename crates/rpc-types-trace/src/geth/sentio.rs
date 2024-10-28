@@ -54,11 +54,11 @@ pub struct SentioTrace {
     pub gas_used: U256,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub from: Option<Address>,
+    pub from: Option<String>,
 
     // used by call
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub to: Option<Address>,
+    pub to: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input: Option<Bytes>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,9 +86,9 @@ pub struct SentioTrace {
 
     // used by log
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub address: Option<Address>,
+    pub address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_address: Option<Address>,
+    pub code_address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Bytes>,
     #[serde(skip_serializing_if = "Option::is_none")]
