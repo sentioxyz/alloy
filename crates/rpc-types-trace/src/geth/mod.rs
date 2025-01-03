@@ -381,14 +381,6 @@ impl GethDebugTracerConfig {
         self.from_value()
     }
 
-    /// Returns the [FlatCallConfig] if it is a call config.
-    pub fn into_flat_call_config(self) -> Result<FlatCallConfig, serde_json::Error> {
-        if self.0.is_null() {
-            return Ok(Default::default());
-        }
-        self.from_value()
-    }
-
     /// Returns the raw json value
     pub fn into_json(self) -> serde_json::Value {
         self.0
