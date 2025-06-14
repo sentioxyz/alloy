@@ -4,10 +4,11 @@ use crate::geth::{
     call::FlatCallFrame,
     mux::{MuxConfig, MuxFrame},
 };
-use alloy_primitives::{Bytes, B256, U256};
+use alloy_primitives::{Address, Bytes, Selector, B256, U256};
 use alloy_rpc_types_eth::{state::StateOverride, BlockOverrides};
 use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::BTreeMap, time::Duration};
+use std::collections::HashMap;
 use crate::geth::sentio::SentioTrace;
 use crate::geth::sentio_prestate::SentioPrestateResult;
 use crate::geth::sentio_reth_raw::SentioRethRawTrace;
@@ -520,6 +521,9 @@ pub struct GethDebugTracingOptions {
     /// The common tracing options
     #[serde(default, flatten)]
     pub config: GethDefaultTracingOptions,
+    /// Sentio tracing options
+    #[serde(default, flatten)]
+    pub sentio_config: SentioDebugTracingOptions,
     /// The custom tracer to use.
     ///
     /// If `None` then the default structlog tracer is used.
@@ -609,6 +613,67 @@ impl GethDebugTracingOptions {
         self.tracer_config = config.into();
         self
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SentioDebugTracingOptions {
+    #[serde(rename = "ignoreGas")]
+    pub ignore_gas_cost: Option<bool>,
+    pub ignore_code_size_limit: Option<bool>,
+    pub tx_origin_override: Option<Address>,
+    #[serde(rename = "createAddressOverride")]
+    pub creation_address_override: Option<Address>,
+    pub mock_functions: Option<HashMap<Address, HashMap<Selector, Bytes>>>,
+    pub caller_override: Option<HashMap<Address, HashMap<Selector, Address>>>,
+    pub creation_overrides: Option<HashMap<Address, SentioCreationOverride>>,
+}
+
+impl SentioDebugTracingOptions {
+    pub fn ignore_gas_cost(&self) -> bool {
+        self.ignore_gas_cost.unwrap_or(false)
+    }
+
+    pub fn ignore_code_size_limit(&self) -> bool {
+        self.ignore_code_size_limit.unwrap_or(false)
+    }
+
+    pub fn tx_origin_override(&self) -> Option<Address> {
+        self.tx_origin_override
+    }
+
+    pub fn creation_address_override(&self) -> Option<Address> {
+        self.creation_address_override
+    }
+
+    pub fn get_mock_function(&self, address: Address, selector: Selector) -> Option<Bytes> {
+        self.mock_functions
+            .as_ref()
+            .and_then(|m| m.get(&address))
+            .and_then(|f| f.get(&selector))
+            .cloned()
+    }
+
+    pub fn get_caller_override(&self, address: Address, selector: Selector) -> Option<Address> {
+        self.caller_override
+            .as_ref()
+            .and_then(|m| m.get(&address))
+            .and_then(|f| f.get(&selector))
+            .cloned()
+    }
+
+    pub fn get_creation_override(&self, address: Address) -> Option<&SentioCreationOverride> {
+        self.creation_overrides
+            .as_ref()
+            .and_then(|m| m.get(&address))
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SentioCreationOverride {
+    pub new_address: Option<Address>,
+    pub new_code: Option<Bytes>,
 }
 
 /// Default tracing options for the struct logger.
