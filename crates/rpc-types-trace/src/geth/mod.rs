@@ -398,6 +398,9 @@ impl GethDebugTracerType {
                 GethDebugBuiltInTracerType::PreStateTracer => "prestateTracer",
                 GethDebugBuiltInTracerType::NoopTracer => "noopTracer",
                 GethDebugBuiltInTracerType::MuxTracer => "muxTracer",
+                GethDebugBuiltInTracerType::SentioTracer => "sentioTracer",
+                GethDebugBuiltInTracerType::SentioPrestateTracer => "sentioPrestateTracer",
+                GethDebugBuiltInTracerType::SentioRethRawTracer => "sentioRethRawTracer",
             },
             Self::JsTracer(code) => code,
         }
