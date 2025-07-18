@@ -16,6 +16,12 @@ pub struct SentioTracerConfig {
     pub debug: bool,
     #[serde_as(deserialize_as = "DefaultOnNull")]
     pub with_internal_calls: bool,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    pub with_storage: bool,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    pub with_storage_keys: bool,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    pub capture_op_codes: HashMap<String, bool>,
 }
 
 #[serde_as]
@@ -94,6 +100,16 @@ pub struct SentioTrace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub topics: Option<Vec<B256>>,
 
+    // used by sload/sstore
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_address: Option<Address>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_slot: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_value: Option<B256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_keys: Option<Vec<StorageKey>>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traces: Vec<Box<SentioTrace>>,
 
@@ -102,6 +118,16 @@ pub struct SentioTrace {
     pub receipt: Option<SentioReceipt>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tracer_config: Option<SentioTracerConfig>
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageKey {
+    pub address: Address,
+    pub code_address: Address,
+    pub base_slot: B256,
+    pub key_slot: B256,
+    pub key: B256,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
