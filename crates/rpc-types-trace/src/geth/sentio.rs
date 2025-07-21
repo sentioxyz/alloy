@@ -104,7 +104,7 @@ pub struct SentioTrace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_address: Option<Address>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage_slot: Option<U256>,
+    pub storage_slot: Option<B256>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_value: Option<B256>,
     #[serde(skip_serializing_if = "Option::is_none")]
