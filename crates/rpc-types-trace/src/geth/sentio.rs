@@ -22,6 +22,8 @@ pub struct SentioTracerConfig {
     pub with_storage_keys: bool,
     #[serde_as(deserialize_as = "DefaultOnNull")]
     pub capture_op_codes: HashMap<String, bool>,
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    pub extra_capture_rules: Vec<String>,
 }
 
 #[serde_as]
@@ -110,6 +112,14 @@ pub struct SentioTrace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_keys: Option<Vec<StorageKey>>,
 
+    // used by custom capture
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub match_rule_ids: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stack: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory: Option<Vec<String>>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub traces: Vec<Box<SentioTrace>>,
 
@@ -117,7 +127,7 @@ pub struct SentioTrace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<SentioReceipt>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tracer_config: Option<SentioTracerConfig>
+    pub tracer_config: Option<SentioTracerConfig>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
