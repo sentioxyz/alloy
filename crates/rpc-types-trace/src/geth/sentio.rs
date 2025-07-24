@@ -125,6 +125,8 @@ pub struct SentioTrace {
 
     // only in root trace
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<SentioReceipt>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tracer_config: Option<SentioTracerConfig>,
