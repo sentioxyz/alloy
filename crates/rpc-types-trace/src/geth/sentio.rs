@@ -21,8 +21,6 @@ pub struct SentioTracerConfig {
     #[serde_as(deserialize_as = "DefaultOnNull")]
     pub with_storage_keys: bool,
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    pub capture_op_codes: HashMap<String, bool>,
-    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub extra_capture_rules: Vec<String>,
 }
 
@@ -84,11 +82,11 @@ pub struct SentioTrace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_stack: Option<Vec<U256>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_memory: Option<Bytes>,
+    pub input_memory: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_stack: Option<Vec<U256>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_memory: Option<Bytes>,
+    pub output_memory: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_pc: Option<usize>,
 
@@ -114,9 +112,9 @@ pub struct SentioTrace {
 
     // used by custom capture
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub match_rule_ids: Option<Vec<i32>>,
+    pub match_rule_ids: Option<Vec<usize>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stack: Option<Vec<String>>,
+    pub stack: Option<Vec<U256>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory: Option<Vec<String>>,
 
