@@ -1074,6 +1074,7 @@ mod tests {
                     GethDebugBuiltInTracerType::PreStateTracer,
                 )),
                 tracer_config: GethDebugTracerConfig::default(),
+                sentio_config: SentioDebugTracingOptions::default(),
                 timeout: None,
             },
             state_overrides: None,
