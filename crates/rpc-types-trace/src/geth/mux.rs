@@ -62,7 +62,7 @@ mod tests {
         let call_config = CallConfig { only_top_call: Some(true), with_log: Some(true) };
         let prestate_config = PreStateConfig { diff_mode: Some(true), ..Default::default() };
 
-        opts.tracing_options.tracer_config = MuxConfig(HashMap::from_iter([
+        opts.tracing_options.tracer_config = MuxConfig(crate::geth::HashMap::from_iter([
             (GethDebugBuiltInTracerType::FourByteTracer, None),
             (GethDebugBuiltInTracerType::CallTracer, Some(call_config.into())),
             (GethDebugBuiltInTracerType::PreStateTracer, Some(prestate_config.into())),
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_mux_frame() {
-        let expected = HashMap::from([
+        let expected = crate::geth::HashMap::from([
             (
                 GethDebugBuiltInTracerType::FourByteTracer,
                 GethTrace::FourByteTracer(serde_json::from_str(FOUR_BYTE_FRAME).unwrap()),
