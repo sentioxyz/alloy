@@ -5,10 +5,14 @@ use crate::geth::{
     erc7562::{Erc7562Config, Erc7562Frame},
     mux::{MuxConfig, MuxFrame},
 };
-use alloy_primitives::{Bytes, B256, U256};
+use alloy_primitives::{Address, Bytes, Selector, B256, U256};
 use alloy_rpc_types_eth::{state::StateOverride, BlockOverrides};
-use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
+use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer};
 use std::{borrow::Cow, collections::BTreeMap, time::Duration};
+use std::collections::HashMap;
+use crate::geth::sentio::SentioTrace;
+use crate::geth::sentio_prestate::SentioPrestateResult;
+use crate::geth::sentio_reth_raw::SentioRethRawTrace;
 // re-exports
 pub use self::{
     call::{CallConfig, CallFrame, CallKind, CallLogFrame, FlatCallConfig},
@@ -26,6 +30,9 @@ pub mod four_byte;
 pub mod mux;
 pub mod noop;
 pub mod pre_state;
+pub mod sentio;
+pub mod sentio_prestate;
+pub mod sentio_reth_raw;
 
 /// Error when the inner tracer from [GethTrace] is mismatching to the target tracer.
 #[derive(Debug, thiserror::Error)]
@@ -140,6 +147,12 @@ pub enum GethTrace {
     NoopTracer(NoopFrame),
     /// The response for mux tracer
     MuxTracer(MuxFrame),
+    /// The response for sentio tracer
+    SentioTracer(SentioTrace),
+    /// The response for sentio prestate tracer
+    SentioPrestateTracer(SentioPrestateResult),
+    /// Reth raw trace, for debugging
+    SentioRethRawTracer(SentioRethRawTrace),
     /// Any other trace response, such as custom javascript response objects
     JS(serde_json::Value),
 }
@@ -312,6 +325,24 @@ impl From<Erc7562Frame> for GethTrace {
     }
 }
 
+impl From<SentioTrace> for GethTrace {
+    fn from(value: SentioTrace) -> Self {
+        Self::SentioTracer(value)
+    }
+}
+
+impl From<SentioPrestateResult> for GethTrace {
+    fn from(value: SentioPrestateResult) -> Self {
+        Self::SentioPrestateTracer(value)
+    }
+}
+
+impl From<SentioRethRawTrace> for GethTrace {
+    fn from(value: SentioRethRawTrace) -> Self {
+        Self::SentioRethRawTracer(value)
+    }
+}
+
 /// Available built-in tracers
 ///
 /// See <https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers>
@@ -356,6 +387,12 @@ pub enum GethDebugBuiltInTracerType {
     /// RIP-7560)
     #[serde(rename = "erc7562Tracer")]
     Erc7562Tracer,
+    #[serde(rename = "sentioTracer")]
+    SentioTracer,
+    #[serde(rename = "sentioPrestateTracer")]
+    SentioPrestateTracer,
+    #[serde(rename = "sentioRethRawTracer")]
+    SentioRethRawTracer
 }
 
 /// Available tracers
@@ -390,6 +427,9 @@ impl GethDebugTracerType {
                 GethDebugBuiltInTracerType::NoopTracer => "noopTracer",
                 GethDebugBuiltInTracerType::MuxTracer => "muxTracer",
                 GethDebugBuiltInTracerType::Erc7562Tracer => "erc7562Tracer",
+                GethDebugBuiltInTracerType::SentioTracer => "sentioTracer",
+                GethDebugBuiltInTracerType::SentioPrestateTracer => "sentioPrestateTracer",
+                GethDebugBuiltInTracerType::SentioRethRawTracer => "sentioRethRawTracer",
             },
             Self::JsTracer(code) => code,
         }
@@ -459,6 +499,20 @@ impl GethDebugTracerConfig {
         }
         self.from_value()
     }
+
+    pub fn into_sentio_config(self) -> Result<sentio::SentioTracerConfig, serde_json::Error> {
+        if self.0.is_null() {
+            return Ok(Default::default());
+        }
+        self.from_value()
+    }
+
+    pub fn into_sentio_prestate_config(self) -> Result<sentio_prestate::SentioPrestateTracerConfig, serde_json::Error> {
+        if self.0.is_null() {
+            return Ok(Default::default());
+        }
+        self.from_value()
+    }
 }
 
 impl From<serde_json::Value> for GethDebugTracerConfig {
@@ -505,6 +559,9 @@ pub struct GethDebugTracingOptions {
     /// The common tracing options
     #[serde(default, flatten)]
     pub config: GethDefaultTracingOptions,
+    /// Sentio tracing options
+    #[serde(default, flatten)]
+    pub sentio_config: SentioDebugTracingOptions,
     /// The custom tracer to use.
     ///
     /// If `None` then the default structlog tracer is used.
@@ -599,6 +656,67 @@ impl GethDebugTracingOptions {
         self.tracer_config = config.into();
         self
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SentioDebugTracingOptions {
+    #[serde(rename = "ignoreGas")]
+    pub ignore_gas_cost: Option<bool>,
+    pub ignore_code_size_limit: Option<bool>,
+    pub tx_origin_override: Option<Address>,
+    #[serde(rename = "createAddressOverride")]
+    pub creation_address_override: Option<Address>,
+    pub mock_functions: Option<HashMap<Address, HashMap<Selector, Bytes>>>,
+    pub caller_override: Option<HashMap<Address, HashMap<Selector, Address>>>,
+    pub creation_overrides: Option<HashMap<Address, SentioCreationOverride>>,
+}
+
+impl SentioDebugTracingOptions {
+    pub fn ignore_gas_cost(&self) -> bool {
+        self.ignore_gas_cost.unwrap_or(false)
+    }
+
+    pub fn ignore_code_size_limit(&self) -> bool {
+        self.ignore_code_size_limit.unwrap_or(false)
+    }
+
+    pub fn tx_origin_override(&self) -> Option<Address> {
+        self.tx_origin_override
+    }
+
+    pub fn creation_address_override(&self) -> Option<Address> {
+        self.creation_address_override
+    }
+
+    pub fn get_mock_function(&self, address: Address, selector: Selector) -> Option<Bytes> {
+        self.mock_functions
+            .as_ref()
+            .and_then(|m| m.get(&address))
+            .and_then(|f| f.get(&selector))
+            .cloned()
+    }
+
+    pub fn get_caller_override(&self, address: Address, selector: Selector) -> Option<Address> {
+        self.caller_override
+            .as_ref()
+            .and_then(|m| m.get(&address))
+            .and_then(|f| f.get(&selector))
+            .cloned()
+    }
+
+    pub fn get_creation_override(&self, address: Address) -> Option<&SentioCreationOverride> {
+        self.creation_overrides
+            .as_ref()
+            .and_then(|m| m.get(&address))
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SentioCreationOverride {
+    pub new_address: Option<Address>,
+    pub new_code: Option<Bytes>,
 }
 
 /// Default tracing options for the struct logger.
@@ -1067,4 +1185,36 @@ mod tests {
         assert_eq!(config.disable_storage, Some(true));
         assert!(!config.code_enabled());
     }
+
+    const SENTIO_TRACE: &str = r#"{"type":"CALL","pc":0,"startIndex":0,"endIndex":5507,"gas":"0x439c0","gasUsed":"0x1f2d3","from":"0x1800420abffab2603d229e1a9fa6f67b9982fd2b","to":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","input":"0x8803dbee000000000000000000000000000000000000000000006155d1df53b9e9463b60000000000000000000000000000000000000000000000000007dd61fefbc974d00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001800420abffab2603d229e1a9fa6f67b9982fd2b0000000000000000000000000000000000000000000000000000000066e3b6c20000000000000000000000000000000000000000000000000000000000000002000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000c1bf21674a3d782ee552d835863d065b7a89d619","value":"0x0","output":"0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000072659165942c75000000000000000000000000000000000000000000006155d1df53b9e9463b60","traces":[],"receipt":{"nonce":135,"blockNumber":"0x13c583a","blockHash":"0x1a3b232318b2a53d9ab448ea81f22582d9c16373e46e19c104a2b2f611405bfe","transactionIndex":45,"gasPrice":"0x16ece9459"}}"#;
+    const CALL_TRACE: &str = r#"{"from":"0xccc5499e15fedaaeaba68aeb79b95b20f725bc56","gas":"0x186a0","gasUsed":"0xdb91","to":"0xdac17f958d2ee523a2206206994597c13d831ec7","input":"0xa9059cbb000000000000000000000000e3f85a274c1edbea2f2498cf5978f41961cf8b5b0000000000000000000000000000000000000000000000000000000068c8f380","value":"0x0","type":"CALL"}"#;
+
+    #[test]
+    fn test_deserialize_sentio_trace() {
+        // sentio trace can only be deserialized into correct type
+        let ret: serde_json::error::Result<SentioTrace> = serde_json::from_str(SENTIO_TRACE);
+        assert!(ret.is_ok());
+
+        let ret: serde_json::error::Result<CallFrame> = serde_json::from_str(SENTIO_TRACE);
+        assert!(ret.is_err());
+
+        let ret: serde_json::error::Result<DefaultFrame> = serde_json::from_str(SENTIO_TRACE);
+        assert!(ret.is_err());
+
+        let ret: serde_json::error::Result<PreStateFrame> = serde_json::from_str(SENTIO_TRACE);
+        assert!(ret.is_err());
+
+        // call trace cannot be deserialized into sentio trace
+        let ret: serde_json::error::Result<SentioTrace> = serde_json::from_str(CALL_TRACE);
+        assert!(ret.is_err());
+    }
+}
+
+fn deny_field<'de, D>(_deserializer: D) -> Result<(), D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Err(serde::de::Error::custom(
+        "Required field should not be present",
+    ))
 }
